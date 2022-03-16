@@ -1,0 +1,42 @@
+name: Real Build
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+
+    - name: Build Debug
+      run: dotnet build AllGlobalUsingsGenerator.sln -p:CI=true -c Debug
+
+    - name: Build Release
+      run: dotnet build AllGlobalUsingsGenerator.sln -p:CI=true -c Release -bl
+ 
+    - name: Upload binary log
+      uses: actions/upload-artifact@v2
+      with:
+        name: binlog
+        path: msbuild.binlog
+        retention-days: 5
+
+    - name: Run tests
+      run: dotnet test
+
+    - name: Pack
+      run: dotnet pack -c Release -o ./artifacts
+
+    - name: Publish
+      run: dotnet nuget push artifacts/**/*.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{secrets.NUGET_API_KEY}}

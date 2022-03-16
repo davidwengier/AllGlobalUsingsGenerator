@@ -1,0 +1,37 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v1
+      with:
+        submodules: true
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+
+    - name: Build Debug
+      run: dotnet build AllGlobalUsingsGenerator.sln -p:CI=true -c Debug
+
+    - name: Build Release
+      run: dotnet build AllGlobalUsingsGenerator.sln -p:CI=true -c Release -bl
+
+    - name: Upload binary log
+      uses: actions/upload-artifact@v2
+      with:
+        name: binlog
+        path: msbuild.binlog
+        retention-days: 5
+
+    - name: Run tests
+      run: dotnet test

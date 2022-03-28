@@ -14,20 +14,20 @@ public class Generator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var data = context.CompilationProvider.Select(
-            static (compilation, token) =>
+            static (compilation, _) =>
             {
-                var namespaces = FindNamespaces(compilation, token);
+                var namespaces = FindNamespaces(compilation);
                 return namespaces;
             });
 
         context.RegisterSourceOutput(data, GenerateSource);
     }
 
-    private static ImmutableHashSet<string> FindNamespaces(Compilation c, CancellationToken token)
+    private static ImmutableHashSet<string> FindNamespaces(Compilation c)
     {
         return ImmutableHashSet.CreateRange(GetTypes(c.GlobalNamespace));
 
-        static IEnumerable<string> GetTypes(INamespaceSymbol ns)
+        IEnumerable<string> GetTypes(INamespaceSymbol ns)
         {
             foreach (var innerNamespace in ns.GetNamespaceMembers())
             {
@@ -38,9 +38,9 @@ public class Generator : IIncrementalGenerator
             }
 
             // Don't output empty namespaces, or the global namespace
-            if (!ns.IsGlobalNamespace && 
+            if (!ns.IsGlobalNamespace &&
                 ns.GetTypeMembers().FirstOrDefault() is { } type &&
-                type.DeclaringSyntaxReferences.Length == 0)
+               !SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, c.Assembly))
             {
                 yield return ns.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             }
